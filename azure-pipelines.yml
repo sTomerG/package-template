@@ -1,0 +1,35 @@
+trigger:
+- main
+
+jobs:
+  - job: precommit
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      matrix:
+        Python39:
+          python.version: '3.9'
+    variables:
+      PRE_COMMIT_HOME: $(Pipeline.Workspace)/pre-commit-cache
+
+    steps:
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: '$(python.version)'
+      displayName: 'Use Python $(python.version)'
+
+    - task: CacheBeta@0
+      inputs:
+        key: pre-commit | "4" | .pre-commit-config.yaml | "$(python.version)"
+        path: $(PRE_COMMIT_HOME)
+
+    - script: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: python -m pip install pytest-azurepipelines
+      displayName: Installing pytest for azure pipelines
+      
+    - script: pre-commit run --all-files --show-diff-on-failure
+      displayName: run pre-commit
